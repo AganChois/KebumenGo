@@ -45,11 +45,12 @@ Below is the list of broken, placeholder, or unimplemented features identified a
   * The query sorts by `display_order`, but the column is `sort_order` in the [kebumengo.sql](file:///Users/wahyutricahya/Web%20Development/KebumenGo/database/kebumengo.sql) schema. (Fixed)
   * Creating/updating categories attempts to write `display_order` and `icon_path`, but the DB columns are named `sort_order` and `icon_img`. This causes query failure. (Fixed)
 
-### 🗺️ Destination Details Page
+### 🗺️ Destination Details Page [DONE]
 * **File**: [app/views/destination/show.php](file:///Users/wahyutricahya/Web%20Development/KebumenGo/app/views/destination/show.php)
+* **Status**: **Fixed**
 * **Detail**:
-  * Tries to access `$destination['days']`, `$destination['open']`, `$destination['close']`, and `$destination['maps']` which are actually named `operational_day`, `open_time`, `close_time`, and `maps_embed` in the DB schema.
-  * Tries to access `$destination['location']` which does not exist in the database table.
+  * Tries to access `$destination['days']`, `$destination['open']`, `$destination['close']`, and `$destination['maps']` which are actually named `operational_day`, `open_time`, `close_time`, and `maps_embed` in the DB schema. (Fixed)
+  * Tries to access `$destination['location']` which does not exist in the database table. (Fixed with fallback)
 
 ### 🎫 Destination Card Component
 * **File**: [app/views/partials/destination-card.php](file:///Users/wahyutricahya/Web%20Development/KebumenGo/app/views/partials/destination-card.php)

@@ -51,7 +51,7 @@ ob_start();
             <span class="eyebrow"><?= htmlspecialchars($destination['category'], ENT_QUOTES, 'UTF-8'); ?></span>
             <h1><?= htmlspecialchars($destination['name'], ENT_QUOTES, 'UTF-8'); ?></h1>
             <div class="detail-meta">
-                <span><?= htmlspecialchars($destination['location'], ENT_QUOTES, 'UTF-8'); ?></span>
+                <span><?= htmlspecialchars($destination['location'] ?? 'Kebumen, Jawa Tengah', ENT_QUOTES, 'UTF-8'); /* ponytail: default location fallback */ ?></span>
                 <span class="divider"></span>
                 <span><?= number_format($destination['rating'], 1); ?> / 5 (<?= $destination['reviews']; ?>)</span>
             </div>
@@ -82,8 +82,8 @@ ob_start();
         </div>
         <div class="info-card">
             <h3>Jam Operasional</h3>
-            <p><?= htmlspecialchars($destination['days'], ENT_QUOTES, 'UTF-8'); ?></p>
-            <p><?= htmlspecialchars($destination['open'], ENT_QUOTES, 'UTF-8'); ?> - <?= htmlspecialchars($destination['close'], ENT_QUOTES, 'UTF-8'); ?></p>
+            <p><?= htmlspecialchars($destination['operational_day'] ?? 'Senin - Minggu', ENT_QUOTES, 'UTF-8'); ?></p>
+            <p><?= htmlspecialchars($destination['open_time'] ?? '07:00:00', ENT_QUOTES, 'UTF-8'); ?> - <?= htmlspecialchars($destination['close_time'] ?? '17:00:00', ENT_QUOTES, 'UTF-8'); ?></p>
         </div>
         <div class="info-card">
             <h3>Tips perjalanan</h3>
@@ -96,7 +96,7 @@ ob_start();
         <div class="info-card">
             <h3>Lokasi</h3>
             <div class="map-embed">
-                <iframe src="<?= htmlspecialchars($destination['maps'], ENT_QUOTES, 'UTF-8'); ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Peta <?= htmlspecialchars($destination['name'], ENT_QUOTES, 'UTF-8'); ?>"></iframe>
+                <iframe src="<?= htmlspecialchars($destination['maps_embed'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Peta <?= htmlspecialchars($destination['name'], ENT_QUOTES, 'UTF-8'); ?>"></iframe>
             </div>
         </div>
     </div>
