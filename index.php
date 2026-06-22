@@ -276,6 +276,21 @@ if ($path === 'admin/login') {
     } elseif ($path === 'admin/kategori/create') {
         $view = __DIR__ . '/app/views/admin/category/create-edit.php';
         $viewData['mode'] = 'create';
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id > 0) {
+            try {
+                $db = getDB();
+                $stmt = $db->prepare("SELECT * FROM categories WHERE id = ?");
+                $stmt->execute([$id]);
+                $category = $stmt->fetch();
+                if ($category) {
+                    $viewData['mode'] = 'edit';
+                    $viewData['category'] = $category;
+                }
+            } catch (Exception $e) {
+                error_log("DB Error: " . $e->getMessage());
+            }
+        }
     } elseif ($path === 'admin/ulasan') {
         $view = __DIR__ . '/app/views/admin/review/index.php';
     } elseif ($path === 'admin/pengaturan') {

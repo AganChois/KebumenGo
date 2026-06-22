@@ -6,6 +6,7 @@ $isUlasan = str_starts_with($currentPath, 'admin/ulasan');
 $isDashboard = $currentPath === 'admin/dashboard';
 
 $mode = $viewData['mode'] ?? 'create';
+$category = $viewData['category'] ?? [];
 $pageTitle = $mode === 'create' ? 'Tambah Kategori' : 'Edit Kategori';
 $actionLabel = $mode === 'create' ? 'Simpan Kategori' : 'Simpan Perubahan';
 
@@ -128,20 +129,24 @@ function navClass(bool $active, string $extra = ''): string
             </header>
 
             <div class="space-y-6 px-8 py-6">
+                <?php include __DIR__ . '/../../partials/admin-flash.php'; ?>
                 <form class="space-y-6 rounded-xl border border-border bg-white p-6" method="post" action="<?= $baseUrl; ?>admin/kategori/create" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="<?= csrfToken(); ?>">
+                    <?php if ($mode === 'edit' && !empty($category['id'])): ?>
+                        <input type="hidden" name="id" value="<?= htmlspecialchars((string)$category['id'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php endif; ?>
                     <div class="grid gap-4 md:grid-cols-3">
                         <label class="text-sm font-semibold">
                             Nama Kategori
-                            <input type="text" name="name" value="<?= $mode === 'create' ? '' : 'Pantai'; ?>" required class="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm">
+                            <input type="text" name="name" value="<?= htmlspecialchars($category['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required class="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm">
                         </label>
                         <label class="text-sm font-semibold">
                             Slug
-                            <input type="text" name="slug" value="<?= $mode === 'create' ? '' : 'pantai'; ?>" required class="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm">
+                            <input type="text" name="slug" value="<?= htmlspecialchars($category['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required class="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm">
                         </label>
                         <label class="text-sm font-semibold">
                             Urutan Tampil
-                            <input type="number" name="sort_order" min="0" value="1" class="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm">
+                            <input type="number" name="sort_order" min="0" value="<?= htmlspecialchars((string)($category['sort_order'] ?? '1'), ENT_QUOTES, 'UTF-8'); ?>" class="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm">
                         </label>
                     </div>
                     <label class="text-sm font-semibold">

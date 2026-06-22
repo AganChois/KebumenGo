@@ -120,6 +120,7 @@ try {
             </header>
 
             <div class="space-y-6 px-8 py-6">
+                <?php include __DIR__ . '/../../partials/admin-flash.php'; ?>
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-semibold">Daftar kategori</h2>
@@ -147,7 +148,7 @@ try {
                                 <tr class="border-t border-border">
                                     <td class="px-4 py-3 font-semibold"><?= htmlspecialchars($category['name'], ENT_QUOTES, 'UTF-8'); ?></td>
                                     <td class="px-4 py-3 text-textSecondary"><?= htmlspecialchars($category['slug'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td class="px-4 py-3"><?= htmlspecialchars((string)$category['display_order'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td class="px-4 py-3"><?= htmlspecialchars((string)($category['sort_order'] ?? '0'), ENT_QUOTES, 'UTF-8'); ?></td>
                                     <td class="px-4 py-3">
                                         <span class="rounded-lg bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
                                             Aktif
