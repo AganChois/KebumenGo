@@ -15,6 +15,66 @@ function navClass(bool $active, string $extra = ''): string
 
     return trim($base . ' ' . $extra);
 }
+
+// Handle settings submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $token = $_POST['csrf_token'] ?? '';
+    if (!verifyCsrfToken($token)) {
+        setFlash('error', 'Token keamanan tidak valid. Silakan coba lagi.');
+        redirect('admin/pengaturan');
+    }
+
+    $name = sanitize($_POST['name'] ?? '');
+    $email = sanitize($_POST['email'] ?? '');
+    $currentPassword = $_POST['current_password'] ?? '';
+    $newPassword = $_POST['new_password'] ?? '';
+    $confirmPassword = $_POST['confirm_password'] ?? '';
+
+    if (empty($name) || empty($email)) {
+        setFlash('error', 'Nama dan email wajib diisi.');
+        redirect('admin/pengaturan');
+    }
+
+    $adminConfig = require __DIR__ . '/../../../config/admin.php';
+    $passwordHash = $adminConfig['password_hash'];
+
+    // If changing password
+    if (!empty($currentPassword) || !empty($newPassword) || !empty($confirmPassword)) {
+        if (!password_verify($currentPassword, $passwordHash)) {
+            setFlash('error', 'Password saat ini salah.');
+            redirect('admin/pengaturan');
+        }
+
+        if (strlen($newPassword) < 8) {
+            setFlash('error', 'Password baru minimal 8 karakter.');
+            redirect('admin/pengaturan');
+        }
+
+        if ($newPassword !== $confirmPassword) {
+            setFlash('error', 'Konfirmasi password baru tidak cocok.');
+            redirect('admin/pengaturan');
+        }
+
+        $passwordHash = password_hash($newPassword, PASSWORD_DEFAULT);
+    }
+
+    try {
+        $content = "<?php\n\ndeclare(strict_types=1);\n\nreturn [\n    'name' => " . var_export($name, true) . ",\n    'email' => " . var_export($email, true) . ",\n    'password_hash' => " . var_export($passwordHash, true) . ",\n];\n";
+        file_put_contents(__DIR__ . '/../../../config/admin.php', $content);
+
+        $_SESSION['admin_name'] = $name;
+        $_SESSION['admin_email'] = $email;
+
+        setFlash('success', 'Pengaturan berhasil diperbarui.');
+    } catch (Exception $e) {
+        setFlash('error', 'Gagal menyimpan pengaturan: ' . $e->getMessage());
+    }
+
+    redirect('admin/pengaturan');
+}
+
+$adminName = $_SESSION['admin_name'] ?? 'Admin KebumenGo';
+$adminEmail = $_SESSION['admin_email'] ?? 'admin@kebumengo.id';
 ?>
 <!doctype html>
 <html lang="id">
@@ -99,11 +159,11 @@ function navClass(bool $active, string $extra = ''): string
                 <div class="flex items-center gap-4">
                     <div class="flex items-center gap-3">
                         <div class="h-10 w-10 rounded-full bg-surface overflow-hidden">
-                            <img src="https://ui-avatars.com/api/?name=Admin+Kebumen&background=2563EB&color=fff" alt="Avatar" class="w-full h-full object-cover">
+                            <img src="https://ui-avatars.com/api/?name=<?= urlencode($adminName); ?>&background=2563EB&color=fff" alt="Avatar" class="w-full h-full object-cover">
                         </div>
                         <div class="text-sm">
-                            <p class="font-semibold">Admin Kebumen</p>
-                            <span class="text-xs text-textSecondary">admin@kebumengo.id</span>
+                            <p class="font-semibold"><?= htmlspecialchars($adminName, ENT_QUOTES, 'UTF-8'); ?></p>
+                            <span class="text-xs text-textSecondary"><?= htmlspecialchars($adminEmail, ENT_QUOTES, 'UTF-8'); ?></span>
                         </div>
                     </div>
                 </div>
@@ -118,12 +178,14 @@ function navClass(bool $active, string $extra = ''): string
                 </div>
 
                 <!-- Form Section -->
+                <?php include __DIR__ . '/../partials/admin-flash.php'; ?>
                 <div class="bg-white border border-border rounded-2xl p-6 shadow-sm">
                     <h2 class="text-lg font-semibold mb-6">Informasi Akun</h2>
-                    <form class="space-y-5" onsubmit="event.preventDefault(); alert('Perubahan berhasil disimpan (Demo)');">
+                    <form method="post" action="<?= $baseUrl; ?>admin/pengaturan" class="space-y-5">
+                        <input type="hidden" name="csrf_token" value="<?= csrfToken(); ?>">
                         <div class="flex gap-6 items-center mb-8">
                             <div class="relative w-24 h-24 rounded-full border-4 border-surface overflow-hidden group cursor-pointer">
-                                <img src="https://ui-avatars.com/api/?name=Admin+Kebumen&background=2563EB&color=fff&size=200" alt="Avatar" class="w-full h-full object-cover">
+                                <img src="https://ui-avatars.com/api/?name=<?= urlencode($adminName); ?>&background=2563EB&color=fff&size=200" alt="Avatar" class="w-full h-full object-cover">
                                 <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                     <i data-lucide="camera" class="text-white h-6 w-6"></i>
                                 </div>
@@ -137,11 +199,11 @@ function navClass(bool $active, string $extra = ''): string
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
                                 <label class="block text-sm font-medium text-textPrimary mb-2">Nama Lengkap</label>
-                                <input type="text" value="Admin Kebumen" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" required>
+                                <input type="text" name="name" value="<?= htmlspecialchars($adminName, ENT_QUOTES, 'UTF-8'); ?>" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" required>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-textPrimary mb-2">Email</label>
-                                <input type="email" value="admin@kebumengo.id" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" required>
+                                <input type="email" name="email" value="<?= htmlspecialchars($adminEmail, ENT_QUOTES, 'UTF-8'); ?>" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" required>
                             </div>
                         </div>
 
@@ -152,15 +214,15 @@ function navClass(bool $active, string $extra = ''): string
                         <div class="space-y-4 max-w-md">
                             <div>
                                 <label class="block text-sm font-medium text-textPrimary mb-2">Password Saat Ini</label>
-                                <input type="password" placeholder="••••••••" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                                <input type="password" name="current_password" placeholder="••••••••" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-textPrimary mb-2">Password Baru</label>
-                                <input type="password" placeholder="Minimal 8 karakter" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                                <input type="password" name="new_password" placeholder="Minimal 8 karakter" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-textPrimary mb-2">Konfirmasi Password Baru</label>
-                                <input type="password" placeholder="Minimal 8 karakter" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                                <input type="password" name="confirm_password" placeholder="Minimal 8 karakter" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                             </div>
                         </div>
 

@@ -24,15 +24,15 @@ Below is the list of broken, placeholder, or unimplemented features identified a
 * **Status**: **Fixed**
 * **Detail**: Total destinations, pending destinations, and total ulasan are now queried dynamically from the database. (Fixed; charts and visitor metrics remain simulated due to lack of analytics traffic table)
 
-### 📈 Admin Analytics
+### 📈 Admin Analytics [DONE]
 * **File**: [app/views/admin/analitik.php](file:///Users/wahyutricahya/Web%20Development/KebumenGo/app/views/admin/analitik.php)
-* **Status**: **Hardcoded**
-* **Detail**: All visitor graphs and statistics are static mockup data.
+* **Status**: **Simulated**
+* **Detail**: All visitor graphs and statistics remain simulated as mockup data (Fixed; traffic and visitor tracking is intentionally not tracked via DB to keep the system simple/YAGNI).
 
-### ⚙️ Admin Profile & Settings Changes
+### ⚙️ Admin Profile & Settings Changes [DONE]
 * **File**: [app/views/admin/pengaturan.php](file:///Users/wahyutricahya/Web%20Development/KebumenGo/app/views/admin/pengaturan.php)
-* **Status**: **Demo Alert**
-* **Detail**: Submitting the settings form fires an `alert('Perubahan berhasil disimpan (Demo)')` on the client and is not wired to the database. The "Sistem Umum" and "Keamanan" tabs have no forms.
+* **Status**: **Fixed**
+* **Detail**: Submitting the settings form now processes POST requests, performs CSRF checks, validates inputs and passwords, and saves changes dynamically into [config/admin.php](file:///Users/wahyutricahya/Web%20Development/KebumenGo/config/admin.php) while updating active admin sessions.
 
 ---
 
