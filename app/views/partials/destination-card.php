@@ -10,7 +10,7 @@ $mainPhoto = !empty($destination['main_photo']) ? $destination['main_photo'] : '
 $badge = $destination['badge'] ?? null;
 $baseUrl = defined('BASE_URL') ? BASE_URL : '/';
 ?>
-<article class="destination-card">
+<article class="destination-card" data-category="<?= htmlspecialchars(strtolower($category), ENT_QUOTES, 'UTF-8'); ?>" data-name="<?= htmlspecialchars(strtolower($name), ENT_QUOTES, 'UTF-8'); ?>" data-price="<?= $price; ?>" data-rating="<?= $rating; ?>">
     <div class="card-media" style="background-image: url('<?= $baseUrl . htmlspecialchars($mainPhoto, ENT_QUOTES, 'UTF-8'); ?>'); background-size: cover; background-position: center;">
         <?php if ($badge): ?>
             <span class="badge badge-success"><?= htmlspecialchars($badge, ENT_QUOTES, 'UTF-8'); ?></span>

@@ -4,15 +4,15 @@ Below is the list of broken, placeholder, or unimplemented features identified a
 
 ## 1. Unimplemented Features (Mockups Only)
 
-### 🔍 Search & Filters on Destination Catalog
+### 🔍 Search & Filters on Destination Catalog [DONE]
 * **File**: [app/views/destination/index.php](file:///Users/wahyutricahya/Web%20Development/KebumenGo/app/views/destination/index.php)
-* **Status**: **Placeholder**
-* **Detail**: The category tabs ("Pantai", "Goa", etc.), the search input, and the sort dropdown are purely static HTML. No JavaScript or backend logic filters the destination list.
+* **Status**: **Fixed**
+* **Detail**: The category tabs, search input, and sort dropdown are now functional and filter the list in real-time. (Fixed via client-side JavaScript)
 
-### 📄 Destination Pagination
+### 📄 Destination Pagination [DONE]
 * **File**: [app/views/destination/index.php](file:///Users/wahyutricahya/Web%20Development/KebumenGo/app/views/destination/index.php)
-* **Status**: **Placeholder**
-* **Detail**: The pagination buttons (`1`, `2`, `3`) are hardcoded markup and do not filter or paginate records.
+* **Status**: **Fixed**
+* **Detail**: The pagination buttons now update dynamically based on the filtered results. (Fixed via client-side JavaScript pagination)
 
 ### ✍️ User Review Submission Form
 * **File**: [app/views/destination/show.php](file:///Users/wahyutricahya/Web%20Development/KebumenGo/app/views/destination/show.php)
