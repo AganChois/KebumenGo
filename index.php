@@ -5,7 +5,15 @@ session_start();
 
 require __DIR__ . '/app/helpers/functions.php';
 
-define('APP_NAME', 'KebumenGo');
+$systemConfigFile = __DIR__ . '/config/system.php';
+$systemConfig = file_exists($systemConfigFile) ? require $systemConfigFile : [
+    'web_name' => 'KebumenGo',
+    'web_desc' => 'Panduan wisata terbaik di Kabupaten Kebumen.',
+    'contact_phone' => '081234567890',
+    'contact_email' => 'info@kebumengo.id',
+    'contact_address' => 'Jl. Pahlawan No. 10, Kebumen, Jawa Tengah',
+];
+define('APP_NAME', $systemConfig['web_name'] ?? 'KebumenGo');
 
 // Automatically detect the base URL path (important for subfolder deployments like XAMPP)
 $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
@@ -342,6 +350,8 @@ if ($path === 'admin/login') {
 
     if ($path === 'admin/dashboard') {
         $view = __DIR__ . '/app/views/admin/dashboard.php';
+    } elseif ($path === 'admin/analitik/export') {
+        $view = __DIR__ . '/app/views/admin/export.php';
     } elseif ($path === 'admin/analitik') {
         $view = __DIR__ . '/app/views/admin/analitik.php';
     } elseif ($path === 'admin/destinasi') {

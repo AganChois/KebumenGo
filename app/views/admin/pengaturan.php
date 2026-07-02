@@ -17,6 +17,20 @@ function navClass(bool $active, string $extra = ''): string
 }
 
 // Handle settings submission
+$systemConfigFile = __DIR__ . '/../../../config/system.php';
+if (!file_exists($systemConfigFile)) {
+    $defaultSystem = [
+        'web_name' => 'KebumenGo',
+        'web_desc' => 'Panduan wisata terbaik di Kabupaten Kebumen.',
+        'contact_phone' => '081234567890',
+        'contact_email' => 'info@kebumengo.id',
+        'contact_address' => 'Jl. Pahlawan No. 10, Kebumen, Jawa Tengah',
+    ];
+    $content = "<?php\n\ndeclare(strict_types=1);\n\nreturn " . var_export($defaultSystem, true) . ";\n";
+    file_put_contents($systemConfigFile, $content);
+}
+$systemConfig = require $systemConfigFile;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $token = $_POST['csrf_token'] ?? '';
     if (!verifyCsrfToken($token)) {
@@ -24,57 +38,113 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin/pengaturan');
     }
 
-    $name = sanitize($_POST['name'] ?? '');
-    $email = sanitize($_POST['email'] ?? '');
-    $currentPassword = $_POST['current_password'] ?? '';
-    $newPassword = $_POST['new_password'] ?? '';
-    $confirmPassword = $_POST['confirm_password'] ?? '';
+    $actionType = $_POST['action_type'] ?? 'profile';
 
-    if (empty($name) || empty($email)) {
-        setFlash('error', 'Nama dan email wajib diisi.');
-        redirect('admin/pengaturan');
+    if ($actionType === 'profile') {
+        $name = sanitize($_POST['name'] ?? '');
+        $email = sanitize($_POST['email'] ?? '');
+
+        if (empty($name) || empty($email)) {
+            setFlash('error', 'Nama dan email wajib diisi.');
+            redirect('admin/pengaturan?tab=profile');
+        }
+
+        $adminConfig = require __DIR__ . '/../../../config/admin.php';
+        $adminConfig['name'] = $name;
+        $adminConfig['email'] = $email;
+
+        try {
+            $content = "<?php\n\ndeclare(strict_types=1);\n\nreturn " . var_export($adminConfig, true) . ";\n";
+            file_put_contents(__DIR__ . '/../../../config/admin.php', $content);
+
+            $_SESSION['admin_name'] = $name;
+            $_SESSION['admin_email'] = $email;
+
+            setFlash('success', 'Profil berhasil diperbarui.');
+        } catch (Exception $e) {
+            setFlash('error', 'Gagal menyimpan profil: ' . $e->getMessage());
+        }
+        redirect('admin/pengaturan?tab=profile');
     }
 
-    $adminConfig = require __DIR__ . '/../../../config/admin.php';
-    $passwordHash = $adminConfig['password_hash'];
+    if ($actionType === 'system') {
+        $webName = sanitize($_POST['web_name'] ?? '');
+        $webDesc = sanitize($_POST['web_desc'] ?? '');
+        $contactPhone = sanitize($_POST['contact_phone'] ?? '');
+        $contactEmail = sanitize($_POST['contact_email'] ?? '');
+        $contactAddress = sanitize($_POST['contact_address'] ?? '');
 
-    // If changing password
-    if (!empty($currentPassword) || !empty($newPassword) || !empty($confirmPassword)) {
+        if (empty($webName)) {
+            setFlash('error', 'Nama website wajib diisi.');
+            redirect('admin/pengaturan?tab=system');
+        }
+
+        $newSystemConfig = [
+            'web_name' => $webName,
+            'web_desc' => $webDesc,
+            'contact_phone' => $contactPhone,
+            'contact_email' => $contactEmail,
+            'contact_address' => $contactAddress,
+        ];
+
+        try {
+            $content = "<?php\n\ndeclare(strict_types=1);\n\nreturn " . var_export($newSystemConfig, true) . ";\n";
+            file_put_contents($systemConfigFile, $content);
+            setFlash('success', 'Pengaturan sistem umum berhasil diperbarui.');
+        } catch (Exception $e) {
+            setFlash('error', 'Gagal menyimpan pengaturan sistem: ' . $e->getMessage());
+        }
+        redirect('admin/pengaturan?tab=system');
+    }
+
+    if ($actionType === 'security') {
+        $currentPassword = $_POST['current_password'] ?? '';
+        $newPassword = $_POST['new_password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
+
+        if (empty($currentPassword) || empty($newPassword) || empty($confirmPassword)) {
+            setFlash('error', 'Semua kolom password wajib diisi.');
+            redirect('admin/pengaturan?tab=security');
+        }
+
+        $adminConfig = require __DIR__ . '/../../../config/admin.php';
+        $passwordHash = $adminConfig['password_hash'];
+
         if (!password_verify($currentPassword, $passwordHash)) {
             setFlash('error', 'Password saat ini salah.');
-            redirect('admin/pengaturan');
+            redirect('admin/pengaturan?tab=security');
         }
 
         if (strlen($newPassword) < 8) {
             setFlash('error', 'Password baru minimal 8 karakter.');
-            redirect('admin/pengaturan');
+            redirect('admin/pengaturan?tab=security');
         }
 
         if ($newPassword !== $confirmPassword) {
             setFlash('error', 'Konfirmasi password baru tidak cocok.');
-            redirect('admin/pengaturan');
+            redirect('admin/pengaturan?tab=security');
         }
 
-        $passwordHash = password_hash($newPassword, PASSWORD_DEFAULT);
+        $adminConfig['password_hash'] = password_hash($newPassword, PASSWORD_DEFAULT);
+
+        try {
+            $content = "<?php\n\ndeclare(strict_types=1);\n\nreturn " . var_export($adminConfig, true) . ";\n";
+            file_put_contents(__DIR__ . '/../../../config/admin.php', $content);
+            setFlash('success', 'Password berhasil diperbarui.');
+        } catch (Exception $e) {
+            setFlash('error', 'Gagal memperbarui password: ' . $e->getMessage());
+        }
+        redirect('admin/pengaturan?tab=security');
     }
-
-    try {
-        $content = "<?php\n\ndeclare(strict_types=1);\n\nreturn [\n    'name' => " . var_export($name, true) . ",\n    'email' => " . var_export($email, true) . ",\n    'password_hash' => " . var_export($passwordHash, true) . ",\n];\n";
-        file_put_contents(__DIR__ . '/../../../config/admin.php', $content);
-
-        $_SESSION['admin_name'] = $name;
-        $_SESSION['admin_email'] = $email;
-
-        setFlash('success', 'Pengaturan berhasil diperbarui.');
-    } catch (Exception $e) {
-        setFlash('error', 'Gagal menyimpan pengaturan: ' . $e->getMessage());
-    }
-
-    redirect('admin/pengaturan');
 }
 
 $adminName = $_SESSION['admin_name'] ?? 'Admin KebumenGo';
 $adminEmail = $_SESSION['admin_email'] ?? 'admin@kebumengo.id';
+
+$activeTab = $_GET['tab'] ?? 'profile';
+if (!in_array($activeTab, ['profile', 'system', 'security'])) {
+    $activeTab = 'profile';
+}
 ?>
 <!doctype html>
 <html lang="id">
@@ -170,29 +240,28 @@ $adminEmail = $_SESSION['admin_email'] ?? 'admin@kebumengo.id';
             </header>
 
             <div class="space-y-6 px-8 py-6 max-w-4xl">
-                <!-- Settings Tabs Navigation (Visual only) -->
+                <!-- Settings Tabs Navigation -->
                 <div class="flex border-b border-border gap-6">
-                    <button class="pb-3 border-b-2 border-primary font-semibold text-primary">Profil Saya</button>
-                    <button class="pb-3 border-b-2 border-transparent font-semibold text-textSecondary hover:text-textPrimary">Sistem Umum</button>
-                    <button class="pb-3 border-b-2 border-transparent font-semibold text-textSecondary hover:text-textPrimary">Keamanan</button>
+                    <button onclick="switchTab('profile')" id="btn-profile" class="pb-3 border-b-2 <?= $activeTab === 'profile' ? 'border-primary text-primary font-semibold' : 'border-transparent text-textSecondary font-semibold hover:text-textPrimary' ?>">Profil Saya</button>
+                    <button onclick="switchTab('system')" id="btn-system" class="pb-3 border-b-2 <?= $activeTab === 'system' ? 'border-primary text-primary font-semibold' : 'border-transparent text-textSecondary font-semibold hover:text-textPrimary' ?>">Sistem Umum</button>
+                    <button onclick="switchTab('security')" id="btn-security" class="pb-3 border-b-2 <?= $activeTab === 'security' ? 'border-primary text-primary font-semibold' : 'border-transparent text-textSecondary font-semibold hover:text-textPrimary' ?>">Keamanan</button>
                 </div>
 
                 <!-- Form Section -->
                 <?php include __DIR__ . '/../partials/admin-flash.php'; ?>
-                <div class="bg-white border border-border rounded-2xl p-6 shadow-sm">
+
+                <!-- Tab: Profil Saya -->
+                <div id="tab-content-profile" class="<?= $activeTab === 'profile' ? '' : 'hidden' ?> bg-white border border-border rounded-2xl p-6 shadow-sm">
                     <h2 class="text-lg font-semibold mb-6">Informasi Akun</h2>
                     <form method="post" action="<?= $baseUrl; ?>admin/pengaturan" class="space-y-5">
                         <input type="hidden" name="csrf_token" value="<?= csrfToken(); ?>">
+                        <input type="hidden" name="action_type" value="profile">
                         <div class="flex gap-6 items-center mb-8">
                             <div class="relative w-24 h-24 rounded-full border-4 border-surface overflow-hidden group cursor-pointer">
                                 <img src="https://ui-avatars.com/api/?name=<?= urlencode($adminName); ?>&background=2563EB&color=fff&size=200" alt="Avatar" class="w-full h-full object-cover">
-                                <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <i data-lucide="camera" class="text-white h-6 w-6"></i>
-                                </div>
                             </div>
                             <div>
-                                <button type="button" class="px-4 py-2 bg-surface text-textPrimary text-sm font-semibold rounded-lg border border-border hover:bg-slate-100 transition">Ubah Foto Profil</button>
-                                <p class="text-xs text-textSecondary mt-2">JPG, GIF atau PNG. Maksimal 2MB.</p>
+                                <p class="text-xs text-textSecondary">Foto profil di-generate otomatis berdasarkan nama Anda.</p>
                             </div>
                         </div>
 
@@ -207,22 +276,69 @@ $adminEmail = $_SESSION['admin_email'] ?? 'admin@kebumengo.id';
                             </div>
                         </div>
 
-                        <hr class="my-6 border-border">
+                        <div class="mt-8 flex justify-end">
+                            <button type="submit" class="bg-primary hover:bg-blue-700 transition-colors text-white px-6 py-2.5 rounded-xl font-semibold text-sm">Simpan Perubahan</button>
+                        </div>
+                    </form>
+                </div>
 
-                        <h2 class="text-lg font-semibold mb-6">Ubah Password</h2>
+                <!-- Tab: Sistem Umum -->
+                <div id="tab-content-system" class="<?= $activeTab === 'system' ? '' : 'hidden' ?> bg-white border border-border rounded-2xl p-6 shadow-sm">
+                    <h2 class="text-lg font-semibold mb-6">Pengaturan Sistem Umum</h2>
+                    <form method="post" action="<?= $baseUrl; ?>admin/pengaturan" class="space-y-5">
+                        <input type="hidden" name="csrf_token" value="<?= csrfToken(); ?>">
+                        <input type="hidden" name="action_type" value="system">
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-textPrimary mb-2">Nama Website</label>
+                                <input type="text" name="web_name" value="<?= htmlspecialchars($systemConfig['web_name'] ?? 'KebumenGo', ENT_QUOTES, 'UTF-8'); ?>" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-textPrimary mb-2">Deskripsi Website</label>
+                                <textarea name="web_desc" rows="3" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"><?= htmlspecialchars($systemConfig['web_desc'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div>
+                                    <label class="block text-sm font-medium text-textPrimary mb-2">Telepon Kontak</label>
+                                    <input type="text" name="contact_phone" value="<?= htmlspecialchars($systemConfig['contact_phone'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-textPrimary mb-2">Email Kontak</label>
+                                    <input type="email" name="contact_email" value="<?= htmlspecialchars($systemConfig['contact_email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-textPrimary mb-2">Alamat Kantor</label>
+                                <input type="text" name="contact_address" value="<?= htmlspecialchars($systemConfig['contact_address'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                            </div>
+                        </div>
+
+                        <div class="mt-8 flex justify-end">
+                            <button type="submit" class="bg-primary hover:bg-blue-700 transition-colors text-white px-6 py-2.5 rounded-xl font-semibold text-sm">Simpan Perubahan</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tab: Keamanan -->
+                <div id="tab-content-security" class="<?= $activeTab === 'security' ? '' : 'hidden' ?> bg-white border border-border rounded-2xl p-6 shadow-sm">
+                    <h2 class="text-lg font-semibold mb-6">Ubah Password</h2>
+                    <form method="post" action="<?= $baseUrl; ?>admin/pengaturan" class="space-y-5">
+                        <input type="hidden" name="csrf_token" value="<?= csrfToken(); ?>">
+                        <input type="hidden" name="action_type" value="security">
                         
                         <div class="space-y-4 max-w-md">
                             <div>
                                 <label class="block text-sm font-medium text-textPrimary mb-2">Password Saat Ini</label>
-                                <input type="password" name="current_password" placeholder="••••••••" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                                <input type="password" name="current_password" placeholder="••••••••" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" required>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-textPrimary mb-2">Password Baru</label>
-                                <input type="password" name="new_password" placeholder="Minimal 8 karakter" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                                <input type="password" name="new_password" placeholder="Minimal 8 karakter" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" required>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-textPrimary mb-2">Konfirmasi Password Baru</label>
-                                <input type="password" name="confirm_password" placeholder="Minimal 8 karakter" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                                <input type="password" name="confirm_password" placeholder="Minimal 8 karakter" class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" required>
                             </div>
                         </div>
 
@@ -247,6 +363,32 @@ $adminEmail = $_SESSION['admin_email'] ?? 'admin@kebumengo.id';
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         lucide.createIcons();
+
+        function switchTab(tabId) {
+            // Hide all tab contents
+            document.getElementById('tab-content-profile').classList.add('hidden');
+            document.getElementById('tab-content-system').classList.add('hidden');
+            document.getElementById('tab-content-security').classList.add('hidden');
+            
+            // Remove active styles from all buttons
+            const buttons = ['profile', 'system', 'security'];
+            buttons.forEach(id => {
+                const btn = document.getElementById('btn-' + id);
+                btn.className = "pb-3 border-b-2 border-transparent text-textSecondary font-semibold hover:text-textPrimary";
+            });
+            
+            // Show selected content
+            document.getElementById('tab-content-' + tabId).classList.remove('hidden');
+            
+            // Add active styles to selected button
+            const activeBtn = document.getElementById('btn-' + tabId);
+            activeBtn.className = "pb-3 border-b-2 border-primary font-semibold text-primary";
+
+            // Update URL query parameter without page reload
+            const url = new URL(window.location);
+            url.searchParams.set('tab', tabId);
+            window.history.pushState({}, '', url);
+        }
     </script>
 </body>
 </html>

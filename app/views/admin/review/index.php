@@ -223,11 +223,21 @@ try {
                         <h2 class="text-lg font-semibold">Daftar ulasan</h2>
                         <p class="text-sm text-textSecondary">Kelola reputasi destinasi dengan cepat.</p>
                     </div>
-                    <form method="post" action="<?= $baseUrl; ?>admin/ulasan/aksi">
-                        <input type="hidden" name="csrf_token" value="<?= csrfToken(); ?>">
-                        <input type="hidden" name="action" value="approve_all">
-                        <button class="rounded-lg bg-textPrimary px-4 py-2 text-sm font-semibold text-white" type="submit">Approve Semua Pending</button>
-                    </form>
+                    <div class="flex items-center gap-3">
+                        <a href="<?= $baseUrl; ?>admin/analitik/export?type=ulasan&format=excel" class="rounded-lg border border-border bg-white px-4 py-2 text-sm font-semibold text-textSecondary flex items-center gap-1.5 hover:bg-surface">
+                            <i data-lucide="download" class="h-4 w-4"></i>
+                            Unduh Excel
+                        </a>
+                        <a href="<?= $baseUrl; ?>admin/analitik/export?type=ulasan&format=pdf" target="_blank" class="rounded-lg border border-border bg-white px-4 py-2 text-sm font-semibold text-textSecondary flex items-center gap-1.5 hover:bg-surface">
+                            <i data-lucide="file-text" class="h-4 w-4"></i>
+                            Cetak PDF
+                        </a>
+                        <form method="post" action="<?= $baseUrl; ?>admin/ulasan/aksi">
+                            <input type="hidden" name="csrf_token" value="<?= csrfToken(); ?>">
+                            <input type="hidden" name="action" value="approve_all">
+                            <button class="rounded-lg bg-textPrimary px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700" type="submit">Approve Semua Pending</button>
+                        </form>
+                    </div>
                 </div>
 
                 <form method="get" action="<?= $baseUrl; ?>admin/ulasan" class="flex flex-wrap items-center gap-3">

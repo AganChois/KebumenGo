@@ -229,8 +229,16 @@ function getDestPageUrl(int $pageNum) {
                         <p class="text-sm text-textSecondary">Pantau status publikasi dan harga tiket terbaru.</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
-                        <a href="<?= $baseUrl; ?>admin/kategori" class="rounded-lg border border-border bg-white px-4 py-2 text-sm font-semibold text-textSecondary">Kelola Kategori</a>
-                        <a href="<?= $baseUrl; ?>admin/destinasi/create" class="rounded-lg bg-textPrimary px-4 py-2 text-sm font-semibold text-white">+ Tambah Destinasi</a>
+                        <a href="<?= $baseUrl; ?>admin/analitik/export?type=destinasi&format=excel" class="rounded-lg border border-border bg-white px-4 py-2 text-sm font-semibold text-textSecondary flex items-center gap-1.5 hover:bg-surface">
+                            <i data-lucide="download" class="h-4 w-4"></i>
+                            Unduh Excel
+                        </a>
+                        <a href="<?= $baseUrl; ?>admin/analitik/export?type=destinasi&format=pdf" target="_blank" class="rounded-lg border border-border bg-white px-4 py-2 text-sm font-semibold text-textSecondary flex items-center gap-1.5 hover:bg-surface">
+                            <i data-lucide="file-text" class="h-4 w-4"></i>
+                            Cetak PDF
+                        </a>
+                        <a href="<?= $baseUrl; ?>admin/kategori" class="rounded-lg border border-border bg-white px-4 py-2 text-sm font-semibold text-textSecondary hover:bg-surface">Kelola Kategori</a>
+                        <a href="<?= $baseUrl; ?>admin/destinasi/create" class="rounded-lg bg-textPrimary px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">+ Tambah Destinasi</a>
                     </div>
                 </div>
 

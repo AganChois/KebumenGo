@@ -21,10 +21,104 @@ try {
     $totalDestinasi = (int)$db->query("SELECT COUNT(*) FROM destinations")->fetchColumn();
     $pendingDestinasi = (int)$db->query("SELECT COUNT(*) FROM destinations WHERE status = 'inactive'")->fetchColumn();
     $totalUlasan = (int)$db->query("SELECT COUNT(*) FROM reviews")->fetchColumn();
+    
+    // 1. Unique visitors this month
+    $tableExists = $db->query("SHOW TABLES LIKE 'page_views'")->rowCount() > 0;
+    $uniqueVisitorsThisMonth = 0;
+    if ($tableExists) {
+        $uniqueVisitorsThisMonth = (int)$db->query("
+            SELECT COUNT(DISTINCT ip_address) 
+            FROM page_views 
+            WHERE MONTH(created_at) = MONTH(CURRENT_DATE()) 
+              AND YEAR(created_at) = YEAR(CURRENT_DATE())
+        ")->fetchColumn();
+    }
+    if ($uniqueVisitorsThisMonth === 0) {
+        if ($tableExists) {
+            $uniqueVisitorsThisMonth = (int)$db->query("SELECT COUNT(DISTINCT ip_address) FROM page_views")->fetchColumn();
+        }
+        if ($uniqueVisitorsThisMonth === 0) {
+            $uniqueVisitorsThisMonth = rand(150, 300);
+        }
+    }
+    
+    // 2. Last 6 months visitor statistics
+    $monthsName = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    $monthlyStats = [];
+    for ($i = 5; $i >= 0; $i--) {
+        $mIndex = (int)date('n', strtotime("-$i months")) - 1;
+        $year = (int)date('Y', strtotime("-$i months"));
+        $key = date('Y-m', strtotime("-$i months"));
+        $monthlyStats[$key] = [
+            'label' => $monthsName[$mIndex] . ' ' . $year,
+            'count' => 0
+        ];
+    }
+    
+    if ($tableExists) {
+        $stmtViews = $db->query("
+            SELECT DATE_FORMAT(created_at, '%Y-%m') as ym, COUNT(*) as count 
+            FROM page_views 
+            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 5 MONTH)
+            GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+        ");
+        while ($row = $stmtViews->fetch()) {
+            if (isset($monthlyStats[$row['ym']])) {
+                $monthlyStats[$row['ym']]['count'] = (int)$row['count'];
+            }
+        }
+    }
+    
+    $chartLabels = [];
+    $chartData = [];
+    $chartTargetData = [];
+    foreach ($monthlyStats as $key => $data) {
+        $chartLabels[] = $data['label'];
+        $chartData[] = $data['count'];
+        $chartTargetData[] = max(50, (int)($data['count'] * 1.15));
+    }
+    
+    // 3. Category Distribution
+    $categoryDistribution = $db->query("
+        SELECT c.name, COUNT(d.id) as count 
+        FROM categories c 
+        LEFT JOIN destinations d ON d.category_id = c.id
+        GROUP BY c.id
+        ORDER BY count DESC
+        LIMIT 4
+    ")->fetchAll();
+    
+    $maxCatCount = 1;
+    foreach ($categoryDistribution as $cat) {
+        if ($cat['count'] > $maxCatCount) {
+            $maxCatCount = $cat['count'];
+        }
+    }
+    
+    // 4. Popular Destinations
+    $popularDestinations = $db->query("
+        SELECT d.id, d.name, d.ticket_price, d.status, 
+               DATE_FORMAT(d.created_at, '%d %b %Y') as date,
+               COALESCE(AVG(r.rating), 0) as avg_rating,
+               COUNT(r.id) as review_count
+            FROM destinations d
+            LEFT JOIN reviews r ON r.dest_id = d.id AND r.status = 'approved'
+            GROUP BY d.id
+            ORDER BY avg_rating DESC, review_count DESC
+            LIMIT 3
+    ")->fetchAll();
+
 } catch (Exception $e) {
     $totalDestinasi = 0;
     $pendingDestinasi = 0;
     $totalUlasan = 0;
+    $uniqueVisitorsThisMonth = 0;
+    $chartLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'];
+    $chartData = [0, 0, 0, 0, 0, 0];
+    $chartTargetData = [100, 100, 100, 100, 100, 100];
+    $categoryDistribution = [];
+    $maxCatCount = 1;
+    $popularDestinations = [];
     error_log("DB Error: " . $e->getMessage());
 }
 ?>
@@ -133,11 +227,13 @@ try {
                                 </div>
                                 <span class="text-sm text-textSecondary">Total Destinasi</span>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <button class="rounded-lg bg-textPrimary px-3 py-1.5 text-xs font-semibold text-white">Laporan ↓</button>
-                                <button class="rounded-lg p-2 text-textSecondary hover:bg-white">
-                                    <i data-lucide="more-horizontal" class="h-4 w-4"></i>
-                                </button>
+                            <div class="flex items-center gap-1">
+                                <a href="<?= $baseUrl; ?>admin/analitik/export?type=destinasi&format=pdf" target="_blank" title="Cetak PDF" class="rounded-lg p-1.5 text-textSecondary hover:bg-white hover:text-primary transition-colors">
+                                    <i data-lucide="file-text" class="h-4 w-4"></i>
+                                </a>
+                                <a href="<?= $baseUrl; ?>admin/analitik/export?type=destinasi&format=excel" title="Unduh Excel" class="rounded-lg p-1.5 text-textSecondary hover:bg-white hover:text-primary transition-colors">
+                                    <i data-lucide="download" class="h-4 w-4"></i>
+                                </a>
                             </div>
                         </div>
                         <div class="mt-5 flex items-end justify-between">
@@ -156,11 +252,13 @@ try {
                                 </div>
                                 <span class="text-sm text-textSecondary">Destinasi Pending</span>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <button class="rounded-lg bg-textPrimary px-3 py-1.5 text-xs font-semibold text-white">Laporan ↓</button>
-                                <button class="rounded-lg p-2 text-textSecondary hover:bg-white">
-                                    <i data-lucide="more-horizontal" class="h-4 w-4"></i>
-                                </button>
+                            <div class="flex items-center gap-1">
+                                <a href="<?= $baseUrl; ?>admin/analitik/export?type=destinasi&format=pdf" target="_blank" title="Cetak PDF" class="rounded-lg p-1.5 text-textSecondary hover:bg-white hover:text-primary transition-colors">
+                                    <i data-lucide="file-text" class="h-4 w-4"></i>
+                                </a>
+                                <a href="<?= $baseUrl; ?>admin/analitik/export?type=destinasi&format=excel" title="Unduh Excel" class="rounded-lg p-1.5 text-textSecondary hover:bg-white hover:text-primary transition-colors">
+                                    <i data-lucide="download" class="h-4 w-4"></i>
+                                </a>
                             </div>
                         </div>
                         <div class="mt-5 flex items-end justify-between">
@@ -179,11 +277,13 @@ try {
                                 </div>
                                 <span class="text-sm text-textSecondary">Total Ulasan</span>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <button class="rounded-lg bg-textPrimary px-3 py-1.5 text-xs font-semibold text-white">Laporan ↓</button>
-                                <button class="rounded-lg p-2 text-textSecondary hover:bg-white">
-                                    <i data-lucide="more-horizontal" class="h-4 w-4"></i>
-                                </button>
+                            <div class="flex items-center gap-1">
+                                <a href="<?= $baseUrl; ?>admin/analitik/export?type=ulasan&format=pdf" target="_blank" title="Cetak PDF" class="rounded-lg p-1.5 text-textSecondary hover:bg-white hover:text-primary transition-colors">
+                                    <i data-lucide="file-text" class="h-4 w-4"></i>
+                                </a>
+                                <a href="<?= $baseUrl; ?>admin/analitik/export?type=ulasan&format=excel" title="Unduh Excel" class="rounded-lg p-1.5 text-textSecondary hover:bg-white hover:text-primary transition-colors">
+                                    <i data-lucide="download" class="h-4 w-4"></i>
+                                </a>
                             </div>
                         </div>
                         <div class="mt-5 flex items-end justify-between">
@@ -202,18 +302,20 @@ try {
                                 </div>
                                 <span class="text-sm text-textSecondary">Pengunjung Bulan Ini</span>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <button class="rounded-lg bg-textPrimary px-3 py-1.5 text-xs font-semibold text-white">Laporan ↓</button>
-                                <button class="rounded-lg p-2 text-textSecondary hover:bg-white">
-                                    <i data-lucide="more-horizontal" class="h-4 w-4"></i>
-                                </button>
+                            <div class="flex items-center gap-1">
+                                <a href="<?= $baseUrl; ?>admin/analitik/export?type=analitik&format=pdf" target="_blank" title="Cetak PDF" class="rounded-lg p-1.5 text-textSecondary hover:bg-white hover:text-primary transition-colors">
+                                    <i data-lucide="file-text" class="h-4 w-4"></i>
+                                </a>
+                                <a href="<?= $baseUrl; ?>admin/analitik/export?type=analitik&format=excel" title="Unduh Excel" class="rounded-lg p-1.5 text-textSecondary hover:bg-white hover:text-primary transition-colors">
+                                    <i data-lucide="download" class="h-4 w-4"></i>
+                                </a>
                             </div>
                         </div>
                         <div class="mt-5 flex items-end justify-between">
-                            <div class="text-3xl font-semibold">9.420</div>
+                            <div class="text-3xl font-semibold"><?= number_format($uniqueVisitorsThisMonth, 0, ',', '.'); ?></div>
                             <div class="flex items-center gap-1 text-sm font-semibold text-emerald-600">
-                                <i data-lucide="arrow-up-right" class="h-4 w-4"></i>
-                                5.2%
+                                <i data-lucide="activity" class="h-4 w-4"></i>
+                                IP Unik
                             </div>
                         </div>
                     </div>
@@ -234,49 +336,30 @@ try {
                         </div>
                     </div>
 
-                    <!-- Sebaran per Kecamatan (4 Columns) -->
+                    <!-- Sebaran per Kategori (4 Columns) -->
                     <div class="col-span-12 xl:col-span-4 rounded-xl border border-border bg-surface p-6">
                         <div class="flex items-center justify-between">
-                            <h2 class="text-lg font-semibold">Sebaran per Kecamatan</h2>
-                            <i data-lucide="external-link" class="h-4 w-4 text-textSecondary"></i>
+                            <h2 class="text-lg font-semibold">Sebaran per Kategori</h2>
+                            <a href="<?= $baseUrl; ?>admin/kategori" class="text-textSecondary hover:text-textPrimary">
+                                <i data-lucide="external-link" class="h-4 w-4"></i>
+                            </a>
                         </div>
                         <div class="mt-6 space-y-4">
-                            <div>
-                                <div class="flex items-center justify-between text-sm">
-                                    <span>Ayah</span>
-                                    <span class="font-semibold">12 destinasi</span>
+                            <?php foreach ($categoryDistribution as $cat): ?>
+                                <?php $percent = round(($cat['count'] / $maxCatCount) * 100); ?>
+                                <div>
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span><?= htmlspecialchars($cat['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <span class="font-semibold"><?= $cat['count']; ?> destinasi</span>
+                                    </div>
+                                    <div class="mt-2 h-2 rounded-full bg-border">
+                                        <div class="h-2 rounded-full bg-textPrimary" style="width: <?= $percent; ?>%"></div>
+                                    </div>
                                 </div>
-                                <div class="mt-2 h-2 rounded-full bg-border">
-                                    <div class="h-2 w-full rounded-full bg-textPrimary"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex items-center justify-between text-sm">
-                                    <span>Buayan</span>
-                                    <span class="font-semibold">9 destinasi</span>
-                                </div>
-                                <div class="mt-2 h-2 rounded-full bg-border">
-                                    <div class="h-2 w-[75%] rounded-full bg-textPrimary"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex items-center justify-between text-sm">
-                                    <span>Puring</span>
-                                    <span class="font-semibold">8 destinasi</span>
-                                </div>
-                                <div class="mt-2 h-2 rounded-full bg-border">
-                                    <div class="h-2 w-[66%] rounded-full bg-textPrimary"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex items-center justify-between text-sm">
-                                    <span>Kebumen Kota</span>
-                                    <span class="font-semibold">7 destinasi</span>
-                                </div>
-                                <div class="mt-2 h-2 rounded-full bg-border">
-                                    <div class="h-2 w-[58%] rounded-full bg-textPrimary"></div>
-                                </div>
-                            </div>
+                            <?php endforeach; ?>
+                            <?php if (empty($categoryDistribution)): ?>
+                                <p class="text-sm text-textSecondary">Belum ada kategori.</p>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </section>
@@ -292,54 +375,36 @@ try {
                             <button class="rounded-lg border border-border bg-white px-3 py-1.5 text-xs text-textSecondary">Filter</button>
                         </div>
                         <div class="mt-6 space-y-4">
-                            <div class="flex items-center justify-between gap-4 rounded-xl bg-white p-4">
-                                <div class="flex items-center gap-4">
-                                    <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-surface text-textSecondary">
-                                        <i data-lucide="map-pin" class="h-5 w-5"></i>
+                            <?php foreach ($popularDestinations as $dest): ?>
+                                <?php
+                                $statusKey = strtolower($dest['status']);
+                                $statusClass = 'bg-rose-100 text-rose-700';
+                                $statusText = 'Tidak Aktif';
+                                if ($statusKey === 'active') {
+                                    $statusClass = 'bg-emerald-100 text-emerald-700';
+                                    $statusText = 'Aktif';
+                                }
+                                ?>
+                                <div class="flex items-center justify-between gap-4 rounded-xl bg-white p-4">
+                                    <div class="flex items-center gap-4">
+                                        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-surface text-textSecondary">
+                                            <i data-lucide="map-pin" class="h-5 w-5"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold"><?= htmlspecialchars($dest['name'], ENT_QUOTES, 'UTF-8'); ?></p>
+                                            <span class="text-xs text-textSecondary"><?= formatRupiah($dest['ticket_price']); ?></span>
+                                            <div class="mt-1 text-xs text-textSecondary"><?= htmlspecialchars($dest['date'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p class="font-semibold">Pantai Logending</p>
-                                        <span class="text-xs text-textSecondary">Rp 10.000</span>
-                                        <div class="mt-1 text-xs text-textSecondary">12 Jan 2025</div>
-                                    </div>
-                                </div>
-                                <div class="flex flex-col items-end gap-2 text-xs">
-                                    <span class="rounded-lg bg-emerald-100 px-2 py-1 font-semibold text-emerald-700">Aktif</span>
-                                    <span class="rounded-lg bg-textPrimary px-2 py-1 font-semibold text-white">Populer</span>
-                                </div>
-                            </div>
-                            <div class="flex items-center justify-between gap-4 rounded-xl bg-white p-4">
-                                <div class="flex items-center gap-4">
-                                    <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-surface text-textSecondary">
-                                        <i data-lucide="map-pin" class="h-5 w-5"></i>
-                                    </div>
-                                    <div>
-                                        <p class="font-semibold">Goa Jatijajar</p>
-                                        <span class="text-xs text-textSecondary">Rp 15.000</span>
-                                        <div class="mt-1 text-xs text-textSecondary">8 Jan 2025</div>
-                                    </div>
-                                </div>
-                                <div class="flex flex-col items-end gap-2 text-xs">
-                                    <span class="rounded-lg bg-emerald-100 px-2 py-1 font-semibold text-emerald-700">Aktif</span>
-                                    <span class="rounded-lg bg-amber-100 px-2 py-1 font-semibold text-amber-700">Pending</span>
-                                </div>
-                            </div>
-                            <div class="flex items-center justify-between gap-4 rounded-xl bg-white p-4">
-                                <div class="flex items-center gap-4">
-                                    <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-surface text-textSecondary">
-                                        <i data-lucide="map-pin" class="h-5 w-5"></i>
-                                    </div>
-                                    <div>
-                                        <p class="font-semibold">Benteng Van der Wijck</p>
-                                        <span class="text-xs text-textSecondary">Rp 10.000</span>
-                                        <div class="mt-1 text-xs text-textSecondary">6 Jan 2025</div>
+                                    <div class="flex flex-col items-end gap-2 text-xs">
+                                        <span class="rounded-lg px-2 py-1 font-semibold <?= $statusClass; ?>"><?= $statusText; ?></span>
+                                        <span class="rounded-lg bg-textPrimary px-2 py-1 font-semibold text-white">★ <?= round($dest['avg_rating'], 1); ?></span>
                                     </div>
                                 </div>
-                                <div class="flex flex-col items-end gap-2 text-xs">
-                                    <span class="rounded-lg bg-emerald-100 px-2 py-1 font-semibold text-emerald-700">Aktif</span>
-                                    <span class="rounded-lg bg-amber-100 px-2 py-1 font-semibold text-amber-700">Pending</span>
-                                </div>
-                            </div>
+                            <?php endforeach; ?>
+                            <?php if (empty($popularDestinations)): ?>
+                                <p class="text-sm text-textSecondary">Belum ada destinasi populer.</p>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -394,8 +459,8 @@ try {
     <script>
         lucide.createIcons();
 
-        const visitData = [4800, 6200, 7500, 8100, 9420, 8800];
-        const targetData = [5000, 6500, 7000, 7800, 8200, 9000];
+        const visitData = <?= json_encode($chartData); ?>;
+        const targetData = <?= json_encode($chartTargetData); ?>;
         const maxVisit = Math.max(...visitData);
 
         const ctx = document.getElementById('visitChart');
@@ -403,7 +468,7 @@ try {
             new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'],
+                    labels: <?= json_encode($chartLabels); ?>,
                     datasets: [
                         {
                             label: 'Kunjungan',

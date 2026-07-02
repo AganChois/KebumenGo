@@ -202,6 +202,16 @@ function navClass(bool $active, string $extra = ''): string
                     <p class="text-sm text-textSecondary">Wawasan mendalam tentang performa platform dan perilaku pengunjung.</p>
                 </div>
                 <div class="flex items-center gap-4">
+                    <div class="flex gap-2">
+                        <a href="<?= $baseUrl; ?>admin/analitik/export?type=analitik&format=excel" class="flex items-center gap-1.5 rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-textSecondary hover:bg-surface">
+                            <i data-lucide="download" class="h-4 w-4"></i>
+                            Unduh Excel
+                        </a>
+                        <a href="<?= $baseUrl; ?>admin/analitik/export?type=analitik&format=pdf" target="_blank" class="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                            <i data-lucide="file-text" class="h-4 w-4"></i>
+                            Cetak PDF
+                        </a>
+                    </div>
                     <div class="flex items-center gap-3">
                         <div class="h-10 w-10 rounded-full bg-surface"></div>
                         <div class="text-sm">
