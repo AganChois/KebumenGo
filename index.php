@@ -25,6 +25,8 @@ if ($baseDir === '/' || $baseDir === '\\') {
 }
 
 $adminConfig = require __DIR__ . '/config/admin.php';
+$adminName = $_SESSION['admin_name'] ?? $adminConfig['name'] ?? 'Admin Kebumen';
+$adminEmail = $_SESSION['admin_email'] ?? $adminConfig['email'] ?? 'admin@kebumengo.id';
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $requestUri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';

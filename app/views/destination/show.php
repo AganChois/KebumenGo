@@ -6,7 +6,7 @@ try {
     $db = getDB();
     
     $stmt = $db->prepare("
-        SELECT d.*, c.name as category, 
+        SELECT d.*, c.name as category, c.slug as category_slug,
                COALESCE(AVG(r.rating), 0) as rating, 
                COUNT(r.id) as reviews
         FROM destinations d
@@ -52,7 +52,7 @@ try {
     $destination['tips'] = ['Patuhi peraturan setempat', 'Jaga kebersihan lokasi', 'Bawa barang secukupnya'];
     $destination['main_photo'] = !empty($destination['main_photo']) ? $destination['main_photo'] : 'public/images/placeholders/destination-placeholder.svg';
 
-    $stmtReviews = $db->prepare("SELECT * FROM reviews WHERE dest_id = ? AND status = 'approved' ORDER BY created_at DESC LIMIT 5");
+    $stmtReviews = $db->prepare("SELECT * FROM reviews WHERE dest_id = ? AND status = 'approved' ORDER BY created_at DESC LIMIT 3");
     $stmtReviews->execute([$destination['id']]);
     $reviewsList = $stmtReviews->fetchAll();
 
@@ -68,10 +68,7 @@ ob_start();
 <section class="section detail-hero" data-reveal>
     <div class="container detail-grid">
         <div class="detail-media">
-            <div class="media-stack">
-                <div class="media-main" style="background-image: url('<?= $baseUrl . htmlspecialchars($destination['main_photo'], ENT_QUOTES, 'UTF-8'); ?>'); background-size: cover; background-position: center;"></div>
-                <div class="media-thumb" style="background-image: url('<?= $baseUrl . htmlspecialchars($destination['main_photo'], ENT_QUOTES, 'UTF-8'); ?>'); background-size: cover; background-position: center;"></div>
-            </div>
+            <div class="media-main" style="background-image: url('<?= $baseUrl . htmlspecialchars($destination['main_photo'], ENT_QUOTES, 'UTF-8'); ?>'); background-size: cover; background-position: center;"></div>
         </div>
         <div class="detail-info">
             <span class="eyebrow"><?= htmlspecialchars($destination['category'], ENT_QUOTES, 'UTF-8'); ?></span>
@@ -89,7 +86,7 @@ ob_start();
                 <div class="total"><span>Total per Orang</span><strong><?= formatRupiah($destination['ticket_price'] + $destination['est_food']); ?></strong></div>
             </div>
             <div class="detail-actions">
-                <a class="btn btn-primary" href="<?= $baseUrl; ?>rekomendasi">Hitung Budget</a>
+                <a class="btn btn-primary" href="<?= $baseUrl; ?>rekomendasi?budget=<?= $destination['ticket_price'] + $destination['est_food'] + $destination['est_parking']; ?>&orang=1&kategori=<?= $destination['category_slug']; ?>">Hitung Budget</a>
                 <a class="btn btn-outline" href="<?= $baseUrl; ?>destinasi">Lihat Destinasi Lain</a>
             </div>
         </div>
@@ -99,7 +96,7 @@ ob_start();
 <section class="section surface" data-reveal>
     <div class="container info-grid">
         <div class="info-card">
-            <h3>Fasilitas</h3>
+            <h3 style="margin-bottom: 16px;">Fasilitas</h3>
             <ul class="pill-list">
                 <?php foreach ($destination['facilities'] as $facility): ?>
                     <li><?= htmlspecialchars($facility, ENT_QUOTES, 'UTF-8'); ?></li>
@@ -107,12 +104,14 @@ ob_start();
             </ul>
         </div>
         <div class="info-card">
-            <h3>Jam Operasional</h3>
-            <p><?= htmlspecialchars($destination['operational_day'] ?? 'Senin - Minggu', ENT_QUOTES, 'UTF-8'); ?></p>
-            <p><?= htmlspecialchars($destination['open_time'] ?? '07:00:00', ENT_QUOTES, 'UTF-8'); ?> - <?= htmlspecialchars($destination['close_time'] ?? '17:00:00', ENT_QUOTES, 'UTF-8'); ?></p>
+            <h3 style="margin-bottom: 16px;">Jam Operasional</h3>
+            <p style="font-weight: 600; color: var(--text-primary);"><?= htmlspecialchars($destination['operational_day'] ?? 'Senin - Minggu', ENT_QUOTES, 'UTF-8'); ?></p>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">
+                <?= date('H:i', strtotime($destination['open_time'] ?? '07:00:00')); ?> - <?= date('H:i', strtotime($destination['close_time'] ?? '17:00:00')); ?> WIB
+            </p>
         </div>
         <div class="info-card">
-            <h3>Tips perjalanan</h3>
+            <h3 style="margin-bottom: 16px;">Tips Perjalanan</h3>
             <ul class="tip-list">
                 <?php foreach ($destination['tips'] as $tip): ?>
                     <li><?= htmlspecialchars($tip, ENT_QUOTES, 'UTF-8'); ?></li>

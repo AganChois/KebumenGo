@@ -35,9 +35,9 @@ try {
 }
 
 $itineraries = [
-    ['title' => 'Trip 1 hari Pantai Selatan', 'time' => '08:00 - 16:00', 'budget' => 120000, 'notes' => 'Pantai Logending, Karang Bolong, kuliner sore'],
-    ['title' => 'Half day Goa & Sejarah', 'time' => '09:00 - 13:00', 'budget' => 90000, 'notes' => 'Goa Jatijajar + Benteng Van der Wijck'],
-    ['title' => 'Kuliner malam Kebumen', 'time' => '18:00 - 21:00', 'budget' => 75000, 'notes' => 'Sate Ambal, jajanan lokal, kopi tradisional'],
+    ['title' => 'Trip 1 hari Pantai Selatan', 'time' => '08:00 - 16:00', 'budget' => 120000, 'notes' => 'Pantai Logending, Karang Bolong, kuliner sore', 'category' => 'pantai'],
+    ['title' => 'Half day Goa & Sejarah', 'time' => '09:00 - 13:00', 'budget' => 90000, 'notes' => 'Goa Jatijajar + Benteng Van der Wijck', 'category' => 'semua'],
+    ['title' => 'Kuliner malam Kebumen', 'time' => '18:00 - 21:00', 'budget' => 75000, 'notes' => 'Sate Ambal, jajanan lokal, kopi tradisional', 'category' => 'kuliner'],
 ];
 
 $testimonials = [
@@ -178,7 +178,7 @@ ob_start();
                     </div>
                     <div class="itinerary-meta">
                         <span class="badge badge-accent">Budget <?= formatRupiah($itinerary['budget']); ?></span>
-                        <a class="btn btn-outline" href="<?= $baseUrl; ?>rekomendasi">Cek rekomendasi</a>
+                        <a class="btn btn-outline" href="<?= $baseUrl; ?>rekomendasi?budget=<?= $itinerary['budget']; ?>&orang=1&kategori=<?= $itinerary['category']; ?>">Cek rekomendasi</a>
                     </div>
                 </article>
             <?php endforeach; ?>

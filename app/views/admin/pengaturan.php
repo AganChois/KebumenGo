@@ -151,6 +151,7 @@ if (!in_array($activeTab, ['profile', 'system', 'security'])) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/svg+xml" href="<?= $baseUrl; ?>public/images/logo.svg">
     <title>Pengaturan | Admin KebumenGo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -180,9 +181,9 @@ if (!in_array($activeTab, ['profile', 'system', 'security'])) {
     <div class="flex h-screen overflow-hidden">
         <aside class="fixed left-0 top-0 flex h-screen w-[240px] flex-col border-r border-border bg-white px-5 py-6">
             <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white">KG</div>
+                <img src="<?= $baseUrl; ?>public/images/logo.svg" alt="Logo" class="h-10 w-10 object-contain">
                 <div>
-                    <p class="text-sm font-semibold">KebumenGo</p>
+                    <p class="text-sm font-semibold"><?= htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8'); ?></p>
                     <span class="text-xs text-textSecondary">Admin Panel</span>
                 </div>
             </div>

@@ -111,6 +111,7 @@ function getDestPageUrl(int $pageNum) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/svg+xml" href="<?= $baseUrl; ?>public/images/logo.svg">
     <title>Manajemen Destinasi | Admin KebumenGo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -140,9 +141,9 @@ function getDestPageUrl(int $pageNum) {
     <div class="flex h-screen overflow-hidden">
         <aside class="fixed left-0 top-0 flex h-screen w-[240px] flex-col border-r border-border bg-white px-5 py-6">
             <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white">KG</div>
+                <img src="<?= $baseUrl; ?>public/images/logo.svg" alt="Logo" class="h-10 w-10 object-contain">
                 <div>
-                    <p class="text-sm font-semibold">KebumenGo</p>
+                    <p class="text-sm font-semibold"><?= htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8'); ?></p>
                     <span class="text-xs text-textSecondary">Admin Panel</span>
                 </div>
             </div>
@@ -187,15 +188,13 @@ function getDestPageUrl(int $pageNum) {
                     <p class="text-sm text-textSecondary">Kelola data destinasi wisata Kebumen secara terstruktur.</p>
                 </div>
                 <div class="flex items-center gap-4">
-                    <div class="relative hidden w-72 md:block">
-                        <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-textSecondary"></i>
-                        <input type="text" placeholder="Cari destinasi..." class="w-full rounded-xl border border-border bg-surface py-2.5 pl-10 pr-4 text-sm focus:border-primary focus:outline-none">
-                    </div>
                     <div class="flex items-center gap-3">
-                        <div class="h-10 w-10 rounded-full bg-surface"></div>
+                        <div class="h-10 w-10 rounded-full bg-surface overflow-hidden">
+                            <img src="https://ui-avatars.com/api/?name=<?= urlencode($adminName); ?>&background=2563EB&color=fff" alt="Avatar" class="w-full h-full object-cover">
+                        </div>
                         <div class="text-sm">
-                            <p class="font-semibold">Admin Kebumen</p>
-                            <span class="text-xs text-textSecondary">admin@kebumengo.id</span>
+                            <p class="font-semibold"><?= htmlspecialchars($adminName, ENT_QUOTES, 'UTF-8'); ?></p>
+                            <span class="text-xs text-textSecondary"><?= htmlspecialchars($adminEmail, ENT_QUOTES, 'UTF-8'); ?></span>
                         </div>
                     </div>
                 </div>

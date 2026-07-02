@@ -37,7 +37,7 @@ ob_start();
         <p>Filter cepat, urutkan harga, dan temukan destinasi yang cocok untuk rencana liburanmu.</p>
         <div class="info-strip">
             <span>Tip: mulai dari budget Rp 75.000 untuk 1 orang.</span>
-            <a class="btn btn-outline" href="<?= $baseUrl; ?>rekomendasi">Coba hitung budget</a>
+            <a class="btn btn-outline" href="<?= $baseUrl; ?>rekomendasi?budget=75000&orang=1&kategori=semua">Coba hitung budget</a>
         </div>
         <div class="filter-bar">
             <div class="filter-tabs">
