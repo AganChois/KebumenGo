@@ -171,7 +171,7 @@ try {
                         <textarea name="description" rows="4" placeholder="Tuliskan deskripsi singkat" class="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none"></textarea>
                     </label>
 
-                    <div class="grid gap-4 md:grid-cols-2">
+                    <div class="grid gap-4 md:grid-cols-3">
                         <label class="text-sm font-semibold">
                             Foto Utama
                             <input type="file" name="main_photo" class="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm">
@@ -180,6 +180,13 @@ try {
                         <label class="text-sm font-semibold">
                             Fasilitas (pisahkan dengan koma)
                             <input type="text" name="facilities" placeholder="Toilet, Mushola, Parkir" class="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm">
+                        </label>
+                        <label class="text-sm font-semibold">
+                            Status Destinasi
+                            <select name="status" class="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm">
+                                <option value="active">Aktif (Tampil di Publik)</option>
+                                <option value="inactive">Tidak Aktif (Tersembunyi)</option>
+                            </select>
                         </label>
                     </div>
 

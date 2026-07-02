@@ -18,20 +18,92 @@ function navClass(bool $active, string $extra = ''): string
 
 try {
     $db = getDB();
-    $stmt = $db->query("
+    
+    // Pagination parameters
+    $limit = 10;
+    $page = max(1, (int)($_GET['page'] ?? 1));
+    $offset = ($page - 1) * $limit;
+    
+    // Filter and search parameters
+    $search = sanitize($_GET['search'] ?? '');
+    $statusFilter = strtolower(trim($_GET['status'] ?? ''));
+    $sort = strtolower(trim($_GET['sort'] ?? 'newest'));
+    
+    // Build WHERE conditions
+    $conditions = [];
+    $params = [];
+    
+    if ($search !== '') {
+        $conditions[] = "d.name LIKE ?";
+        $params[] = "%$search%";
+    }
+    
+    if ($statusFilter !== '') {
+        $conditions[] = "d.status = ?";
+        $params[] = $statusFilter;
+    }
+    
+    $whereClause = '';
+    if (!empty($conditions)) {
+        $whereClause = 'WHERE ' . implode(' AND ', $conditions);
+    }
+    
+    // Determine sorting
+    $orderBy = "ORDER BY d.created_at DESC";
+    if ($sort === 'cheapest') {
+        $orderBy = "ORDER BY d.ticket_price ASC";
+    } elseif ($sort === 'most_expensive') {
+        $orderBy = "ORDER BY d.ticket_price DESC";
+    }
+    
+    // Count total destinations
+    $totalCountQuery = "
+        SELECT COUNT(*) 
+        FROM destinations d
+        $whereClause
+    ";
+    $totalCountStmt = $db->prepare($totalCountQuery);
+    $totalCountStmt->execute($params);
+    $totalDestinations = (int)$totalCountStmt->fetchColumn();
+    $totalPages = (int)ceil($totalDestinations / $limit);
+    
+    // Fetch paginated destinations
+    $sql = "
         SELECT d.id, d.name, c.name as category, d.ticket_price as price, 
                d.status, DATE_FORMAT(d.updated_at, '%d %b %Y') as updated
         FROM destinations d
         JOIN categories c ON d.category_id = c.id
-        ORDER BY d.created_at DESC
-    ");
+        $whereClause
+        $orderBy
+        LIMIT ? OFFSET ?
+    ";
+    
+    $stmt = $db->prepare($sql);
+    $paramIndex = 1;
+    foreach ($params as $paramValue) {
+        $stmt->bindValue($paramIndex++, $paramValue);
+    }
+    $stmt->bindValue($paramIndex++, (int)$limit, PDO::PARAM_INT);
+    $stmt->bindValue($paramIndex++, (int)$offset, PDO::PARAM_INT);
+    $stmt->execute();
     $destinations = $stmt->fetchAll();
+    
     if (empty($destinations)) {
         $destinations = [];
     }
 } catch (Exception $e) {
     $destinations = [];
+    $totalDestinations = 0;
+    $totalPages = 0;
+    $page = 1;
+    $offset = 0;
     error_log("DB Error: " . $e->getMessage());
+}
+
+function getDestPageUrl(int $pageNum) {
+    $params = $_GET;
+    $params['page'] = $pageNum;
+    return '?' . http_build_query($params);
 }
 ?>
 <!doctype html>
@@ -130,6 +202,27 @@ try {
             </header>
 
             <div class="space-y-6 px-8 py-6">
+                <?php $success = getFlash('success'); ?>
+                <?php $error = getFlash('error'); ?>
+                
+                <?php if ($success): ?>
+                    <div class="rounded-xl bg-emerald-50 border border-emerald-100 p-4 text-sm text-emerald-600 flex items-start gap-3 shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 shrink-0 text-emerald-500">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div><?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?></div>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($error): ?>
+                    <div class="rounded-xl bg-rose-50 border border-rose-100 p-4 text-sm text-rose-600 flex items-start gap-3 shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 shrink-0 text-rose-500">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                        </svg>
+                        <div><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
+                    </div>
+                <?php endif; ?>
+
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-semibold">Daftar destinasi</h2>
@@ -141,22 +234,26 @@ try {
                     </div>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-3">
+                <form method="get" action="<?= $baseUrl; ?>admin/destinasi" class="flex flex-wrap items-center gap-3">
                     <div class="relative w-full max-w-xs">
                         <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-textSecondary"></i>
-                        <input type="text" placeholder="Cari nama destinasi" class="w-full rounded-xl border border-border bg-white py-2.5 pl-10 pr-4 text-sm focus:border-primary focus:outline-none">
+                        <input type="text" name="search" value="<?= htmlspecialchars($_GET['search'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" placeholder="Cari nama destinasi" class="w-full rounded-xl border border-border bg-white py-2.5 pl-10 pr-4 text-sm focus:border-primary focus:outline-none">
                     </div>
-                    <select class="rounded-xl border border-border bg-white px-3 py-2 text-sm">
-                        <option>Semua status</option>
-                        <option>Aktif</option>
-                        <option>Pending</option>
+                    <select name="status" class="rounded-xl border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none">
+                        <option value="">Semua status</option>
+                        <option value="active" <?= ($_GET['status'] ?? '') === 'active' ? 'selected' : ''; ?>>Aktif</option>
+                        <option value="inactive" <?= ($_GET['status'] ?? '') === 'inactive' ? 'selected' : ''; ?>>Tidak Aktif</option>
                     </select>
-                    <select class="rounded-xl border border-border bg-white px-3 py-2 text-sm">
-                        <option>Urutkan: Terbaru</option>
-                        <option>Urutkan: Termurah</option>
-                        <option>Urutkan: Termahal</option>
+                    <select name="sort" class="rounded-xl border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none">
+                        <option value="newest" <?= ($_GET['sort'] ?? '') === 'newest' ? 'selected' : ''; ?>>Urutkan: Terbaru</option>
+                        <option value="cheapest" <?= ($_GET['sort'] ?? '') === 'cheapest' ? 'selected' : ''; ?>>Urutkan: Termurah</option>
+                        <option value="most_expensive" <?= ($_GET['sort'] ?? '') === 'most_expensive' ? 'selected' : ''; ?>>Urutkan: Termahal</option>
                     </select>
-                </div>
+                    <button type="submit" class="rounded-lg bg-textPrimary px-4 py-2 text-sm font-semibold text-white">Filter</button>
+                    <?php if (!empty($_GET['search']) || !empty($_GET['status']) || ($_GET['sort'] ?? 'newest') !== 'newest'): ?>
+                        <a href="<?= $baseUrl; ?>admin/destinasi" class="rounded-lg border border-border bg-white px-4 py-2 text-sm font-semibold text-textSecondary">Reset</a>
+                    <?php endif; ?>
+                </form>
 
                 <div class="overflow-hidden rounded-xl border border-border bg-white">
                     <table class="w-full text-sm">
@@ -174,11 +271,11 @@ try {
                             <?php foreach ($destinations as $destination): ?>
                                 <?php
                                 $statusKey = strtolower($destination['status']);
-                                $statusClass = 'bg-slate-100 text-slate-600';
-                                if ($statusKey === 'aktif') {
+                                $statusClass = 'bg-rose-100 text-rose-700';
+                                $statusText = 'Tidak Aktif';
+                                if ($statusKey === 'active') {
                                     $statusClass = 'bg-emerald-100 text-emerald-700';
-                                } elseif ($statusKey === 'pending') {
-                                    $statusClass = 'bg-amber-100 text-amber-700';
+                                    $statusText = 'Aktif';
                                 }
                                 ?>
                                 <tr class="border-t border-border">
@@ -187,7 +284,7 @@ try {
                                     <td class="px-4 py-3"><?= formatRupiah($destination['price']); ?></td>
                                     <td class="px-4 py-3">
                                         <span class="rounded-lg px-2 py-1 text-xs font-semibold <?= $statusClass; ?>">
-                                            <?= htmlspecialchars($destination['status'], ENT_QUOTES, 'UTF-8'); ?>
+                                            <?= $statusText; ?>
                                         </span>
                                     </td>
                                     <td class="px-4 py-3 text-textSecondary"><?= htmlspecialchars($destination['updated'], ENT_QUOTES, 'UTF-8'); ?></td>
@@ -207,14 +304,69 @@ try {
                     </table>
                 </div>
 
-                <div class="flex flex-wrap items-center justify-between text-sm text-textSecondary">
-                    <span>Menampilkan 1-4 dari 48 destinasi</span>
-                    <div class="flex items-center gap-2">
-                        <button class="rounded-lg border border-border bg-white px-3 py-1">1</button>
-                        <button class="rounded-lg border border-border bg-white px-3 py-1">2</button>
-                        <button class="rounded-lg border border-border bg-white px-3 py-1">3</button>
+                <!-- Pagination -->
+                <?php if ($totalPages > 1): ?>
+                    <div class="flex items-center justify-between border border-border bg-white px-4 py-3 sm:px-6 rounded-xl shadow-sm mt-4">
+                        <div class="flex flex-1 justify-between sm:hidden">
+                            <?php if ($page > 1): ?>
+                                <a href="<?= getDestPageUrl($page - 1); ?>" class="relative inline-flex items-center rounded-md border border-border bg-white px-4 py-2 text-sm font-medium text-textSecondary hover:bg-surface">Previous</a>
+                            <?php else: ?>
+                                <span class="relative inline-flex items-center rounded-md border border-border bg-slate-50 px-4 py-2 text-sm font-medium text-slate-300 cursor-not-allowed">Previous</span>
+                            <?php endif; ?>
+                            
+                            <?php if ($page < $totalPages): ?>
+                                <a href="<?= getDestPageUrl($page + 1); ?>" class="relative inline-flex items-center rounded-md border border-border bg-white px-4 py-2 text-sm font-medium text-textSecondary hover:bg-surface">Next</a>
+                            <?php else: ?>
+                                <span class="relative inline-flex items-center rounded-md border border-border bg-slate-50 px-4 py-2 text-sm font-medium text-slate-300 cursor-not-allowed">Next</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-sm text-textSecondary">
+                                    Menampilkan <span class="font-semibold"><?= min($totalDestinations, $offset + 1); ?></span> sampai <span class="font-semibold"><?= min($totalDestinations, $offset + count($destinations)); ?></span> dari <span class="font-semibold"><?= $totalDestinations; ?></span> destinasi
+                                </p>
+                            </div>
+                            <div>
+                                <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                                    <!-- Previous Button -->
+                                    <?php if ($page > 1): ?>
+                                        <a href="<?= getDestPageUrl($page - 1); ?>" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-textSecondary ring-1 ring-inset ring-border hover:bg-surface focus:z-20 focus:outline-offset-0">
+                                            <span class="sr-only">Previous</span>
+                                            <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-300 ring-1 ring-inset ring-border bg-slate-50 cursor-not-allowed">
+                                            <span class="sr-only">Previous</span>
+                                            <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                                        </span>
+                                    <?php endif; ?>
+
+                                    <!-- Page Numbers -->
+                                    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                                        <?php if ($i === $page): ?>
+                                            <span aria-current="page" class="relative z-10 inline-flex items-center bg-textPrimary px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-textPrimary"><?= $i; ?></span>
+                                        <?php else: ?>
+                                            <a href="<?= getDestPageUrl($i); ?>" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-textSecondary ring-1 ring-inset ring-border hover:bg-surface focus:z-20 focus:outline-offset-0"><?= $i; ?></a>
+                                        <?php endif; ?>
+                                    <?php endfor; ?>
+
+                                    <!-- Next Button -->
+                                    <?php if ($page < $totalPages): ?>
+                                        <a href="<?= getDestPageUrl($page + 1); ?>" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-textSecondary ring-1 ring-inset ring-border hover:bg-surface focus:z-20 focus:outline-offset-0">
+                                            <span class="sr-only">Next</span>
+                                            <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-300 ring-1 ring-inset ring-border bg-slate-50 cursor-not-allowed">
+                                            <span class="sr-only">Next</span>
+                                            <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                                        </span>
+                                    <?php endif; ?>
+                                </nav>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                <?php endif; ?>
             </div>
         </main>
     </div>
@@ -222,6 +374,35 @@ try {
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         lucide.createIcons();
+
+        // Realtime search & filter
+        const form = document.querySelector('form[method="get"]');
+        if (form) {
+            form.querySelectorAll('select').forEach(select => {
+                select.addEventListener('change', () => {
+                    form.submit();
+                });
+            });
+
+            const searchInput = form.querySelector('input[name="search"]');
+            if (searchInput) {
+                let debounceTimer;
+                searchInput.addEventListener('input', () => {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => {
+                        form.submit();
+                    }, 500);
+                });
+
+                // Restore focus & cursor to the end
+                if (searchInput.value) {
+                    searchInput.focus();
+                    const val = searchInput.value;
+                    searchInput.value = '';
+                    searchInput.value = val;
+                }
+            }
+        }
     </script>
 </body>
 </html>

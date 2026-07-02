@@ -122,8 +122,10 @@ if ($path === 'admin/login') {
                     }
                 }
                 
-                $stmt = $db->prepare("INSERT INTO destinations (category_id, name, slug, description, main_photo, ticket_price, est_food, est_parking, open_time, close_time, operational_day, maps_embed, facilities) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$categoryId, $name, $slug, $description, $mainPhoto, $ticketPrice, $estFood, $estParking, $openTime, $closeTime, $operationalDay, $mapsEmbed, $facilitiesJson]);
+                $status = ($_POST['status'] ?? '') === 'inactive' ? 'inactive' : 'active';
+
+                $stmt = $db->prepare("INSERT INTO destinations (category_id, name, slug, description, main_photo, ticket_price, est_food, est_parking, open_time, close_time, operational_day, maps_embed, facilities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$categoryId, $name, $slug, $description, $mainPhoto, $ticketPrice, $estFood, $estParking, $openTime, $closeTime, $operationalDay, $mapsEmbed, $facilitiesJson, $status]);
                 
                 setFlash('success', 'Destinasi berhasil disimpan.');
             } catch (Exception $e) {
@@ -179,8 +181,10 @@ if ($path === 'admin/login') {
                     }
                 }
                 
-                $stmt = $db->prepare("UPDATE destinations SET category_id = ?, name = ?, slug = ?, description = ?, main_photo = ?, ticket_price = ?, est_food = ?, est_parking = ?, open_time = ?, close_time = ?, operational_day = ?, maps_embed = ?, facilities = ? WHERE id = ?");
-                $stmt->execute([$categoryId, $name, $slug, $description, $mainPhoto, $ticketPrice, $estFood, $estParking, $openTime, $closeTime, $operationalDay, $mapsEmbed, $facilitiesJson, $id]);
+                $status = ($_POST['status'] ?? '') === 'inactive' ? 'inactive' : 'active';
+
+                $stmt = $db->prepare("UPDATE destinations SET category_id = ?, name = ?, slug = ?, description = ?, main_photo = ?, ticket_price = ?, est_food = ?, est_parking = ?, open_time = ?, close_time = ?, operational_day = ?, maps_embed = ?, facilities = ?, status = ? WHERE id = ?");
+                $stmt->execute([$categoryId, $name, $slug, $description, $mainPhoto, $ticketPrice, $estFood, $estParking, $openTime, $closeTime, $operationalDay, $mapsEmbed, $facilitiesJson, $status, $id]);
                 
                 setFlash('success', 'Perubahan destinasi tersimpan.');
             } catch (Exception $e) {
@@ -256,7 +260,28 @@ if ($path === 'admin/login') {
         }
 
         if ($path === 'admin/ulasan/aksi') {
-            setFlash('success', 'Status ulasan berhasil diperbarui (demo).');
+            try {
+                $db = getDB();
+                $action = $_POST['action'] ?? '';
+                $id = (int)($_POST['id'] ?? 0);
+                
+                if ($action === 'approve') {
+                    $stmt = $db->prepare("UPDATE reviews SET status = 'approved' WHERE id = ?");
+                    $stmt->execute([$id]);
+                    setFlash('success', 'Ulasan berhasil disetujui.');
+                } elseif ($action === 'reject') {
+                    $stmt = $db->prepare("UPDATE reviews SET status = 'rejected' WHERE id = ?");
+                    $stmt->execute([$id]);
+                    setFlash('success', 'Ulasan berhasil ditolak.');
+                } elseif ($action === 'approve_all') {
+                    $affected = $db->exec("UPDATE reviews SET status = 'approved' WHERE status = 'pending'");
+                    setFlash('success', $affected . ' ulasan pending berhasil disetujui.');
+                } else {
+                    setFlash('error', 'Aksi tidak dikenal.');
+                }
+            } catch (Exception $e) {
+                setFlash('error', 'Gagal memproses aksi ulasan: ' . $e->getMessage());
+            }
             redirect('admin/ulasan');
         }
     }

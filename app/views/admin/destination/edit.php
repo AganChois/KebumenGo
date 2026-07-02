@@ -187,7 +187,7 @@ try {
                         <textarea name="description" rows="4" class="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm"><?= htmlspecialchars($destination['description'], ENT_QUOTES, 'UTF-8'); ?></textarea>
                     </label>
 
-                    <div class="grid gap-4 md:grid-cols-2">
+                    <div class="grid gap-4 md:grid-cols-3">
                         <label class="text-sm font-semibold">
                             Foto Utama
                             <input type="file" name="main_photo" accept="image/*" class="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm">
@@ -196,6 +196,13 @@ try {
                         <label class="text-sm font-semibold">
                             Fasilitas (pisahkan dengan koma)
                             <input type="text" name="facilities" value="<?= htmlspecialchars($facilitiesStr, ENT_QUOTES, 'UTF-8'); ?>" class="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm">
+                        </label>
+                        <label class="text-sm font-semibold">
+                            Status Destinasi
+                            <select name="status" class="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm">
+                                <option value="active" <?= ($destination['status'] === 'active') ? 'selected' : ''; ?>>Aktif (Tampil di Publik)</option>
+                                <option value="inactive" <?= ($destination['status'] === 'inactive') ? 'selected' : ''; ?>>Tidak Aktif (Tersembunyi)</option>
+                            </select>
                         </label>
                     </div>
 
