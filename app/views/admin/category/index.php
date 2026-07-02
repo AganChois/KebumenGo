@@ -18,10 +18,45 @@ function navClass(bool $active, string $extra = ''): string
 
 try {
     $db = getDB();
-    $categories = $db->query("SELECT * FROM categories ORDER BY sort_order ASC")->fetchAll();
+    
+    // Pagination parameters
+    $limit = 10;
+    $page = max(1, (int)($_GET['page'] ?? 1));
+    $offset = ($page - 1) * $limit;
+    
+    // Count total categories
+    $totalCountStmt = $db->query("SELECT COUNT(*) FROM categories");
+    $totalCategories = (int)$totalCountStmt->fetchColumn();
+    $totalPages = (int)ceil($totalCategories / $limit);
+    
+    // Fetch paginated categories
+    $stmt = $db->prepare("
+        SELECT * 
+        FROM categories 
+        ORDER BY sort_order ASC 
+        LIMIT ? OFFSET ?
+    ");
+    $stmt->bindValue(1, (int)$limit, PDO::PARAM_INT);
+    $stmt->bindValue(2, (int)$offset, PDO::PARAM_INT);
+    $stmt->execute();
+    $categories = $stmt->fetchAll();
+    
+    if (empty($categories)) {
+        $categories = [];
+    }
 } catch (Exception $e) {
     $categories = [];
+    $totalCategories = 0;
+    $totalPages = 0;
+    $page = 1;
+    $offset = 0;
     error_log("DB Error: " . $e->getMessage());
+}
+
+function getCatPageUrl(int $pageNum) {
+    $params = $_GET;
+    $params['page'] = $pageNum;
+    return '?' . http_build_query($params);
 }
 ?>
 <!doctype html>
@@ -169,6 +204,70 @@ try {
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Pagination -->
+                <?php if ($totalPages > 1): ?>
+                    <div class="flex items-center justify-between border border-border bg-white px-4 py-3 sm:px-6 rounded-xl shadow-sm mt-4">
+                        <div class="flex flex-1 justify-between sm:hidden">
+                            <?php if ($page > 1): ?>
+                                <a href="<?= getCatPageUrl($page - 1); ?>" class="relative inline-flex items-center rounded-md border border-border bg-white px-4 py-2 text-sm font-medium text-textSecondary hover:bg-surface">Previous</a>
+                            <?php else: ?>
+                                <span class="relative inline-flex items-center rounded-md border border-border bg-slate-50 px-4 py-2 text-sm font-medium text-slate-300 cursor-not-allowed">Previous</span>
+                            <?php endif; ?>
+                            
+                            <?php if ($page < $totalPages): ?>
+                                <a href="<?= getCatPageUrl($page + 1); ?>" class="relative inline-flex items-center rounded-md border border-border bg-white px-4 py-2 text-sm font-medium text-textSecondary hover:bg-surface">Next</a>
+                            <?php else: ?>
+                                <span class="relative inline-flex items-center rounded-md border border-border bg-slate-50 px-4 py-2 text-sm font-medium text-slate-300 cursor-not-allowed">Next</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-sm text-textSecondary">
+                                    Menampilkan <span class="font-semibold"><?= min($totalCategories, $offset + 1); ?></span> sampai <span class="font-semibold"><?= min($totalCategories, $offset + count($categories)); ?></span> dari <span class="font-semibold"><?= $totalCategories; ?></span> kategori
+                                </p>
+                            </div>
+                            <div>
+                                <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                                    <!-- Previous Button -->
+                                    <?php if ($page > 1): ?>
+                                        <a href="<?= getCatPageUrl($page - 1); ?>" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-textSecondary ring-1 ring-inset ring-border hover:bg-surface focus:z-20 focus:outline-offset-0">
+                                            <span class="sr-only">Previous</span>
+                                            <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-300 ring-1 ring-inset ring-border bg-slate-50 cursor-not-allowed">
+                                            <span class="sr-only">Previous</span>
+                                            <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                                        </span>
+                                    <?php endif; ?>
+
+                                    <!-- Page Numbers -->
+                                    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                                        <?php if ($i === $page): ?>
+                                            <span aria-current="page" class="relative z-10 inline-flex items-center bg-textPrimary px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-textPrimary"><?= $i; ?></span>
+                                        <?php else: ?>
+                                            <a href="<?= getCatPageUrl($i); ?>" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-textSecondary ring-1 ring-inset ring-border hover:bg-surface focus:z-20 focus:outline-offset-0"><?= $i; ?></a>
+                                        <?php endif; ?>
+                                    <?php endfor; ?>
+
+                                    <!-- Next Button -->
+                                    <?php if ($page < $totalPages): ?>
+                                        <a href="<?= getCatPageUrl($page + 1); ?>" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-textSecondary ring-1 ring-inset ring-border hover:bg-surface focus:z-20 focus:outline-offset-0">
+                                            <span class="sr-only">Next</span>
+                                            <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-300 ring-1 ring-inset ring-border bg-slate-50 cursor-not-allowed">
+                                            <span class="sr-only">Next</span>
+                                            <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                                        </span>
+                                    <?php endif; ?>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
         </main>
     </div>
