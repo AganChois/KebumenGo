@@ -13,7 +13,6 @@
         <div class="nav-menu" id="primary-menu" data-nav-menu>
             <a class="nav-link" href="<?= $baseUrl; ?>" data-nav-link>Beranda</a>
             <a class="nav-link" href="<?= $baseUrl; ?>destinasi" data-nav-link>Destinasi</a>
-            <a class="nav-link" href="<?= $baseUrl; ?>destinasi#kategori" data-nav-link>Kategori</a>
             <a class="nav-link" href="<?= $baseUrl; ?>#tentang" data-nav-link>Tentang</a>
             <a class="btn btn-primary" href="<?= $baseUrl; ?>rekomendasi">Cari Rekomendasi</a>
         </div>
